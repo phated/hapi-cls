@@ -10,31 +10,33 @@ describe("basic hapi CLS case", function () {
   before(function (done) {
     var cls = require('continuation-local-storage');
     var ns = cls.createNamespace('hapi@test');
-    ns.set('value', 42);
 
-    var Server = require('hapi').Server;
-    server = new Server('localhost', 8080);
+    ns.run(function () {
+      ns.set('value', 42);
 
-    server.pack.require('..', {namespace : ns.name}, function (err) {
-      if (err) done(err);
+      var Server = require('hapi').Server;
+      server = new Server('localhost', 8080);
+
+      var hello = {
+        handler : function (request, reply) {
+          ns.set('value', 'overwritten');
+          setTimeout(function () {
+            reply({value : ns.get('value')});
+          });
+        }
+      };
+
+      server.route({
+        method : 'GET',
+        path : '/hello',
+        config : hello
+      });
+
+      server.pack.register({
+        plugin : require('..'),
+        options : {namespace : ns.name}
+      }, done);
     });
-
-    var hello = {
-      handler : function (request) {
-        ns.set('value', 'overwritten');
-        setTimeout(function () {
-          request.reply({value : ns.get('value')});
-        });
-      }
-    };
-
-    server.addRoute({
-      method : 'GET',
-      path : '/hello',
-      config : hello
-    });
-
-    done();
   });
 
   it("should still find CLS context on subsequent ticks", function (done) {

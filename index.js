@@ -1,8 +1,6 @@
 'use strict';
 
 module.exports = {
-  name     : 'hapi-cls',
-  version  : '1.1.1',
   register : function (plugin, options, next) {
     if (!options.namespace) next(new TypeError('namespace name required'));
 
@@ -21,4 +19,8 @@ module.exports = {
 
     next();
   }
+};
+
+module.exports.register.attributes = {
+  pkg: require('./package.json')
 };

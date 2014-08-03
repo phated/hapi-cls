@@ -5,31 +5,37 @@ Example:
 ```js
 var cls = require('continuation-local-storage');
 var ns = cls.createNamespace('hapi@test');
-ns.set('value', 42);
 
-var Server = require('hapi').Server;
-server = new Server('localhost', 8080);
+ns.run(function () {
+  ns.set('value', 42);
 
-server.pack.require('hapi-cls', {namespace : ns.name}, function (err) {
-  if (err) done(err);
+  var Server = require('hapi').Server;
+  server = new Server('localhost', 8080);
+
+  var hello = {
+    handler : function (request) {
+      ns.set('value', 'overwritten');
+      setTimeout(function () {
+        request.reply({value : ns.get('value')});
+      });
+    }
+  };
+
+  server.route({
+    method : 'GET',
+    path : '/hello',
+    config : hello
+  });
+
+  server.pack.register({
+    plugin: require('hapi-cls'),
+    options: {namespace : ns.name}
+  }, function (err) {
+    if (err) return console.error(err);
+
+    server.listen();
+  });
 });
-
-var hello = {
-  handler : function (request) {
-    ns.set('value', 'overwritten');
-    setTimeout(function () {
-      request.reply({value : ns.get('value')});
-    });
-  }
-};
-
-server.addRoute({
-  method : 'GET',
-  path : '/hello',
-  config : hello
-});
-
-server.listen();
 ```
 
 With this setup, requests to `/hello` will return `{"value":"overwritten"}`. As
